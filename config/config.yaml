@@ -3,7 +3,7 @@ project:
   seed: 42
 
 data:
-  dataset_path: "data/sample_fb_ads.csv"
+  dataset_path: "data/synthetic_fb_ads_undergarments.csv"
   use_sample: true
 
 thresholds:
