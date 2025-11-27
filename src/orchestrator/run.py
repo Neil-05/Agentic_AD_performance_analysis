@@ -7,6 +7,8 @@ from src.agents.data_agent import DataAgent
 from src.agents.insight_agent import InsightAgent
 from src.agents.evaluator_agent import EvaluatorAgent
 from src.agents.creative_agent import CreativeAgent
+from loguru import logger
+
 
 
 class Orchestrator:
@@ -23,7 +25,10 @@ class Orchestrator:
 
     def run(self, query="Analyze ROAS drop"):
         print("\n--- Running Agentic System ---\n")
-
+        
+        logger.add("logs/system.log", rotation="1 MB", backtrace=True, diagnose=True)
+        logger.info(f"Starting Agentic Pipeline Run for query: {query}")
+        
        
         plan = self.planner.plan(query)
         print("Planner Output:", plan)
