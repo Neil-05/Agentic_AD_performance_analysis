@@ -26,7 +26,7 @@ class Orchestrator:
     def run(self, query="Analyze ROAS drop"):
         print("\n--- Running Agentic System ---\n")
         
-        logger.add("logs/system.log", rotation="1 MB", backtrace=True, diagnose=True)
+        logger.add( "logs/system.json", rotation="1 MB", backtrace=True, diagnose=True, serialize=True )   
         logger.info(f"Starting Agentic Pipeline Run for query: {query}")
         
        
