@@ -1,33 +1,26 @@
-class EvaluatorAgent:
-   
+from loguru import logger
 
+
+class EvaluatorAgent:
     def __init__(self, config):
-        self.config = config
+        self.thresholds = config["thresholds"]
 
     def evaluate(self, df, hypotheses):
+        logger.bind(agent="evaluator", step="start", hypotheses=hypotheses).info("Evaluating")
+
         validated = []
 
         for h in hypotheses:
             if h["issue"] == "Low CTR":
-                avg_ctr = df["ctr"].mean()
-                threshold = self.config["thresholds"]["low_ctr"]
+                value = df["ctr"].mean()
+                valid = value < self.thresholds["low_ctr"]
+                item = {
+                    "issue": h["issue"],
+                    "value": value,
+                    "threshold": self.thresholds["low_ctr"],
+                    "valid": bool(valid),
+                }
+                validated.append(item)
 
-                validated.append({
-                    "issue": "Low CTR",
-                    "value": float(avg_ctr),
-                    "threshold": float(threshold),
-                    "valid": bool(avg_ctr < threshold)   
-                })
-
-            if h["issue"] == "Low ROAS":
-                avg_roas = df["roas"].mean()
-                threshold = self.config["thresholds"]["low_roas"]
-
-                validated.append({
-                    "issue": "Low ROAS",
-                    "value": float(avg_roas),
-                    "threshold": float(threshold),
-                    "valid": bool(avg_roas < threshold)   
-                })
-
+        logger.bind(agent="evaluator", step="end", output=validated).info("Evaluation completed")
         return validated
