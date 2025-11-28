@@ -1,6 +1,6 @@
 # Kasparro — Agentic Facebook Performance Analyst
 
-A modular multi-agent system that analyzes Facebook Ads performance, detects CTR/ROAS issues, performs schema validation, retries on failure, and generates improved creatives.  
+A modular multi-agent system that analyzes Facebook Ads performance, detects CTR/ROAS issues, performs schema validation, retries on failure, and generates improved creatives.
 Follows all Kasparro Agentic Assignment requirements: clean structure, agents, config, logs, tests, reproducibility, and dataset switching.
 
 ---
@@ -16,32 +16,53 @@ python3 -m src.orchestrator.run "Analyze ROAS drop"
 
 ---
 
+## ⚠️ Running Tests — Important Note
+
+If you installed packages inside a virtual environment (.venv) but your system still runs the global pytest (Anaconda/macOS), your tests may fail with import errors.
+
+### ✅ Always run tests like this:
+
+```bash
+python -m pytest
+```
+
+This ensures:
+
+* Virtual environment Python is used
+* `src/` package resolves correctly
+* All dependencies (pandas, loguru, etc.) load properly
+
+---
+
 ## Data
 
 ### Default full dataset
+
 ```
 data/synthetic_fb_ads_undergarments.csv
 ```
 
 ### Small sample (for testing)
+
 ```
 data/sample_small.csv
 ```
 
 ### Data documentation
-- Required columns enforced by schema validation:
+
+Required columns (validated by schema):
+
 ```
 date, country, spend, ctr, roas, campaign, message
 ```
 
-If the dataset uses different names (example: `campaign_name`, `creative_message`), automatic column normalization is applied through mapping.
+If a dataset uses alternate names (`campaign_name`, `creative_message`), automatic normalization applies.
 
 ---
 
 ## Config
 
-### Primary config
-`config/config.yaml`:
+### Primary config (`config/config.yaml`)
 
 ```yaml
 data:
@@ -56,8 +77,7 @@ system:
   memory: false
 ```
 
-### Secondary config for small dataset
-`config/sample_small.yaml`:
+### Small dataset config (`config/sample_small.yaml`)
 
 ```yaml
 data:
@@ -68,7 +88,7 @@ thresholds:
   low_roas: 1.5
 ```
 
-### CLI config override
+### CLI override
 
 ```bash
 python3 src/orchestrator/run.py --config config/sample_small.yaml
@@ -123,12 +143,14 @@ project/
 
 ## Run
 
-### Full system:
+### Full system
+
 ```bash
 make run
 ```
 
-### Using alternative config:
+### With custom config
+
 ```bash
 python3 src/orchestrator/run.py --config config/sample_small.yaml
 ```
@@ -137,7 +159,7 @@ python3 src/orchestrator/run.py --config config/sample_small.yaml
 
 ## Outputs
 
-Generated on every run:
+Generated on each run:
 
 ```
 reports/report.md
@@ -150,55 +172,70 @@ logs/system.json
 
 ## Observability
 
-Structured logs stored in:
+Structured logs include:
+
+* agent name
+* stage
+* retries
+* errors
+* dataset path
+* success/failure markers
+
+Stored at:
 
 ```
 logs/system.json
 ```
-
-Each log entry includes:
-- agent name  
-- stage  
-- retries  
-- errors  
-- dataset path  
-- success/failure states  
 
 ---
 
 ## Failure Modes (Documented)
 
 ### 1. Missing columns
+
 ```
 KeyError: Missing required columns: [...]
 ```
 
 ### 2. Invalid numeric values
+
 ```
 ValueError: Non-numeric values found in spend/ctr/roas
 ```
 
 ### 3. Empty file
+
 ```
 ValueError: Dataset is empty
 ```
 
 ### 4. Retry exhaustion
+
 ```
 Exception: DataAgent: Failed to load CSV after retries
 ```
 
-### 5. Insight generation fallback
-If retries fail:
+### 5. Insight fallback
+
 ```
 {"issue": "Unknown", "reason": "Insufficient data", "confidence": 0.0}
 ```
 
 ---
 
+## P1 Enhancements
+
+* Dynamic config switching (`--config` flag)
+* Automatic schema validation
+* Column normalization layer
+* Sample dataset included
+* Documentation of failure modes
+* Test coverage for retry logic, schema validation, and alternate configs
+
+---
+
 ## Release
 
-Version:
 ```
 v2.0.0
 ```
@@ -207,21 +244,21 @@ v2.0.0
 
 ## Self-Review Checklist
 
-- [x] Correct repo name format  
-- [x] README includes quick start + commands  
-- [x] Config present with thresholds  
-- [x] All agents implemented with I/O schema  
-- [x] Prompts stored in `/prompts`  
-- [x] Reports generated  
-- [x] JSON logs included  
-- [x] Unit tests for all agents  
-- [x] Schema validation  
-- [x] Retry logic implemented  
-- [x] Makefile included  
-- [x] v1.0.0 release tag  
-- [x] PR with self-review  
-- [x] Dynamic config switching  
-- [x] Sample dataset provided  
+* [x] Correct repo name format
+* [x] README includes quick start + commands
+* [x] Config system implemented
+* [x] All agents implemented
+* [x] Prompts stored in `/prompts`
+* [x] Reports generated
+* [x] JSON logs included
+* [x] Unit tests for all agents
+* [x] Schema validation
+* [x] Retry logic
+* [x] Makefile
+* [x] Release tag
+* [x] PR with self-review
+* [x] Dynamic config switching
+* [x] Sample dataset included
 
 ---
 
