@@ -2,36 +2,43 @@ from loguru import logger
 from src.agents.creative_score_agent import CreativeScoreAgent
 
 
+
 class CreativeAgent:
     def __init__(self):
-        self.scorer = CreativeScoreAgent()   # scoring engine added
+        self.scorer = CreativeScoreAgent()
 
-    def generate_creatives(self, df):
-        logger.bind(agent="creative", step="start").info("Generating creative suggestions")
+    def generate_creatives(self, df, insights):
+        logger.info("Generating creative suggestions tied to insights")
 
-        low_ctr_ads = df[df["ctr"] < 0.015].head(5)
         results = []
 
-        for _, row in low_ctr_ads.iterrows():
-            campaign_name = row.get("campaign_name", row.get("campaign", "Unknown Campaign"))
-            msg = row.get("message", row.get("creative_message", ""))
+   
+        worst = None
+        for h in insights:
+            if "worst_segment" in h.get("evidence", {}):
+                worst = h["evidence"]["worst_segment"]
+
+  
+        if worst:
+            prob = df[df["country"] == worst]
+        else:
+            prob = df[df["ctr"] < 0.015]
+
+        for _, row in prob.iterrows():
+            msg = row.get("message", "No message")
 
             suggestion = {
-                "campaign": campaign_name,
+                "campaign": row.get("campaign", "Unknown"),
+                "segment": worst or "global",
                 "old_message": msg,
+                "diagnosed_issue": f"Low CTR in {worst}" if worst else "Low CTR ads",
                 "new_creatives": [
-                    f"Try highlighting benefits: {msg}",
-                    "Add urgency-based CTA: 'Limited Time Offer!'",
-                    "Use more emotional storytelling in copy"
+                    f"Shorter message for {worst} audience",
+                    "High-contrast visual optimized for mobile",
+                    f"Rewrite: '{msg[:15]}...' in simpler language",
                 ]
             }
 
-            # FIX: score correct variable
-            scored = self.scorer.score(msg)
-            suggestion["score"] = scored["score"]
-
-            logger.bind(agent="creative", suggestion=suggestion).info("Suggestion created")
             results.append(suggestion)
 
-        logger.bind(agent="creative", step="end", total=len(results)).info("Creative generation completed")
         return results

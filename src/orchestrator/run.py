@@ -49,15 +49,17 @@ class Orchestrator:
         df = self.data_agent.load_data(dataset_path)
 
         summary = self.data_agent.summarize(df)
+        deltas = self.data_agent.compute_deltas(df)
+        summary_with_deltas = {**summary, **deltas}
         print("Data Summary:", summary)
 
-        hypotheses = self.insight_agent.generate_hypotheses(summary)
+        hypotheses = self.insight_agent.generate_hypotheses(summary_with_deltas)
         print("Hypotheses:", hypotheses)
        
         validated = self.evaluator.evaluate(df, hypotheses)
         print("Validated Insights:", validated)
 
-        creatives = self.creative_agent.generate_creatives(df)
+        creatives = self.creative_agent.generate_creatives(df, hypotheses)
         print("Creative Suggestions:", creatives)
 
         scored_output = [

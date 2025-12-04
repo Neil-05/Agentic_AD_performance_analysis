@@ -3,30 +3,38 @@ import time
 
 
 class InsightAgent:
-    def generate_hypotheses(self, summary, retries=3, delay=1):
-        logger.bind(agent="insight", step="start", input=summary).info("Generating hypotheses")
+    def generate_hypotheses(self, summary_with_deltas):
+       
+        logger.info("Generating insights using baseline/current deltas")
 
-        for attempt in range(1, retries + 1):
-            try:
-                hypotheses = []
+        deltas = summary_with_deltas["deltas"]
+        seg = summary_with_deltas["segment_ctr"]
 
-                if summary["avg_ctr"] < 0.015:
-                    hypotheses.append({
-                        "issue": "Low CTR",
-                        "reason": "Users are less engaged with creatives.",
-                        "confidence": 0.78,
-                    })
+        hypotheses = []
 
-                if hypotheses:
-                    logger.bind(agent="insight", step="success", output=hypotheses).info("Hypotheses generated")
-                    return hypotheses
+        if deltas["ctr_delta_pct"] < 0:
+            worst_segment = min(seg, key=seg.get)
 
-            except Exception as e:
-                logger.bind(agent="insight", step="retry", attempt=attempt, error=str(e)).warning(
-                    "Hypothesis generation failed — retrying"
-                )
-                time.sleep(delay)
+            hypotheses.append({
+                "issue": "CTR Drop Detected",
+                "evidence": {
+                    "ctr_delta_pct": deltas["ctr_delta_pct"],
+                    "worst_segment": worst_segment,
+                    "segment_ctr": seg[worst_segment]
+                },
+                "reason": f"CTR dropped in {worst_segment} segment.",
+                "confidence": min(1.0, abs(deltas["ctr_delta_pct"]) / 50)
+            })
 
-        fallback = [{"issue": "Unknown", "reason": "Insufficient data", "confidence": 0.0}]
-        logger.bind(agent="insight", step="fallback", output=fallback).warning("Returning fallback hypothesis")
-        return fallback
+      
+        if deltas["roas_delta_pct"] < 0:
+            hypotheses.append({
+                "issue": "ROAS Decline",
+                "evidence": {
+                    "roas_delta_pct": deltas["roas_delta_pct"]
+                },
+                "reason": "ROAS fell significantly in the current period.",
+                "confidence": min(1.0, abs(deltas["roas_delta_pct"]) / 50)
+            })
+
+        return hypotheses
