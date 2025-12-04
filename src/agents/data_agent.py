@@ -1,4 +1,5 @@
 import time
+import yaml
 from pathlib import Path
 import pandas as pd
 from loguru import logger
@@ -14,6 +15,18 @@ COLUMN_MAP = {
 
 
 class DataAgent:
+    def __init__(self):
+        self.load_schema()
+
+    def load_schema(self):
+        schema_path = Path("schema/data_schema.yaml")
+        if not schema_path.exists():
+            raise FileNotFoundError("Schema file missing at schema/data_schema.yaml")
+        with open(schema_path, "r") as f:
+            schema = yaml.safe_load(f)
+        self.required_cols = schema.get("required_columns", [])
+        self.type_map = schema.get("types", {})
+
     def load_data(self, path, retries=3, delay=1):
         logger.bind(agent="data", step="load_start", path=path).info("Loading data")
         last_error = None
@@ -24,38 +37,31 @@ class DataAgent:
                 if df.empty:
                     raise ValueError("Dataset is empty")
 
-               
                 df = df.rename(columns=COLUMN_MAP)
 
-                missing_cols = [c for c in REQUIRED_COLUMNS if c not in df.columns]
+                missing_cols = [c for c in self.required_cols if c not in df.columns]
                 if missing_cols:
-                    msg = f"Missing required columns after normalization: {missing_cols}"
-                    logger.error(msg)
-                    raise KeyError(msg)
+                    raise KeyError(f"Schema mismatch: missing columns {missing_cols}")
 
                 df = df.replace([float("inf"), float("-inf")], pd.NA)
 
                 if df[["spend", "ctr", "roas"]].isna().any(axis=None):
-                    logger.warning("NaN detected in numeric columns; dropping NaN rows")
                     df = df.dropna(subset=["spend", "ctr", "roas"])
                     if df.empty:
                         raise ValueError("All rows dropped after cleaning numeric NaNs")
 
-                for col in ["spend", "ctr", "roas"]:
-                    try:
+                for col, expected_type in self.type_map.items():
+                    if expected_type == "float":
                         df[col] = pd.to_numeric(df[col], errors="raise")
-                    except Exception as e:
-                        logger.error(f"Invalid numeric value in '{col}': {e}")
-                        raise ValueError(f"Invalid value in column '{col}'")
+                    elif expected_type == "str":
+                        df[col] = df[col].astype(str)
 
                 logger.bind(agent="data", step="load_success", rows=len(df)).info("Data loaded")
                 return df
 
             except Exception as e:
                 last_error = e
-                logger.bind(agent="data", step="load_retry", attempt=attempt, error=str(e)).warning(
-                    "Load failed — retrying"
-                )
+                logger.bind(agent="data", step="load_retry", attempt=attempt, error=str(e)).warning("Load failed — retrying")
                 time.sleep(delay)
 
         logger.bind(agent="data", step="load_failed", error=str(last_error)).error("Failed after retries")
@@ -76,7 +82,7 @@ class DataAgent:
 
     def compute_deltas(self, df):
         logger.bind(agent="data", step="compute_deltas").info("Computing baseline vs current performance")
-     
+
         if len(df) < 4:
             base = {"ctr": df["ctr"].mean(), "roas": df["roas"].mean(), "spend": df["spend"].mean()}
             curr = base
@@ -87,21 +93,27 @@ class DataAgent:
             base = {"ctr": baseline["ctr"].mean(), "roas": baseline["roas"].mean(), "spend": baseline["spend"].mean()}
             curr = {"ctr": current["ctr"].mean(), "roas": current["roas"].mean(), "spend": current["spend"].mean()}
 
-        deltas = {}
         try:
-            deltas["ctr_delta_pct"] = ((curr["ctr"] - base["ctr"]) / base["ctr"]) * 100 if base["ctr"] else 0.0
+            ctr_delta_pct = ((curr["ctr"] - base["ctr"]) / base["ctr"]) * 100 if base["ctr"] else 0.0
         except Exception:
-            deltas["ctr_delta_pct"] = 0.0
-        try:
-            deltas["roas_delta_pct"] = ((curr["roas"] - base["roas"]) / base["roas"]) * 100 if base["roas"] else 0.0
-        except Exception:
-            deltas["roas_delta_pct"] = 0.0
-        try:
-            deltas["spend_delta_pct"] = ((curr["spend"] - base["spend"]) / base["spend"]) * 100 if base["spend"] else 0.0
-        except Exception:
-            deltas["spend_delta_pct"] = 0.0
+            ctr_delta_pct = 0.0
 
-      
+        try:
+            roas_delta_pct = ((curr["roas"] - base["roas"]) / base["roas"]) * 100 if base["roas"] else 0.0
+        except Exception:
+            roas_delta_pct = 0.0
+
+        try:
+            spend_delta_pct = ((curr["spend"] - base["spend"]) / base["spend"]) * 100 if base["spend"] else 0.0
+        except Exception:
+            spend_delta_pct = 0.0
+
+        deltas = {
+            "ctr_delta_pct": ctr_delta_pct,
+            "roas_delta_pct": roas_delta_pct,
+            "spend_delta_pct": spend_delta_pct,
+        }
+
         try:
             seg_ctr = df.groupby("country")["ctr"].mean().sort_values().to_dict()
         except Exception:
@@ -114,8 +126,13 @@ class DataAgent:
             worst_segment = "unknown"
             worst_value = None
 
-        logger.bind(agent="data", step="compute_deltas", deltas=deltas, worst_segment=worst_segment).info(
-            "Deltas computed"
-        )
+        logger.bind(agent="data", step="compute_deltas", deltas=deltas, worst_segment=worst_segment).info("Deltas computed")
 
-        return {"baseline": base, "current": curr, "deltas": deltas, "segment_ctr": seg_ctr, "worst_segment": worst_segment, "worst_value": worst_value}
+        return {
+            "baseline": base,
+            "current": curr,
+            "deltas": deltas,
+            "segment_ctr": seg_ctr,
+            "worst_segment": worst_segment,
+            "worst_value": worst_value
+        }
