@@ -47,6 +47,7 @@ class Orchestrator:
         logger.bind(stage="data_agent", output=f"{len(df)} rows").info("Data loading completed")
 
         summary = self.data_agent.summarize(df)
+<<<<<<< HEAD
         logger.bind(stage="data_summary", output=summary).info("Summary completed")
 
         deltas_full = self.data_agent.compute_deltas(df)
@@ -57,6 +58,20 @@ class Orchestrator:
         drift = detect_schema_drift(prev_columns or [], list(df.columns))
         if drift.get("drifted"):
             logger.bind(stage="schema_drift", drift=drift).warning("Schema drift detected")
+=======
+        deltas = self.data_agent.compute_deltas(df)
+        summary_with_deltas = {**summary, **deltas}
+        print("Data Summary:", summary)
+
+        hypotheses = self.insight_agent.generate_hypotheses(summary_with_deltas)
+        print("Hypotheses:", hypotheses)
+       
+        validated = self.evaluator.evaluate(df, hypotheses)
+        print("Validated Insights:", validated)
+
+        creatives = self.creative_agent.generate_creatives(df, hypotheses)
+        print("Creative Suggestions:", creatives)
+>>>>>>> main
 
         if self.config.get("system", {}).get("adaptive_thresholds", False):
             adaptive = compute_percentile_thresholds(

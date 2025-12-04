@@ -37,6 +37,7 @@ class DataAgent:
                 if df.empty:
                     raise ValueError("Dataset is empty")
 
+<<<<<<< HEAD
                 df = df.rename(columns=COLUMN_MAP)
 
                 missing_cols = [c for c in self.required_cols if c not in df.columns]
@@ -55,6 +56,19 @@ class DataAgent:
                         df[col] = pd.to_numeric(df[col], errors="raise")
                     elif expected_type == "str":
                         df[col] = df[col].astype(str)
+=======
+                # Normalize column names
+                df = df.rename(columns=COLUMN_MAP)
+
+                # Schema check
+                missing_cols = [c for c in REQUIRED_COLUMNS if c not in df.columns]
+                if missing_cols:
+                    raise KeyError(f"Missing required columns: {missing_cols}")
+
+                # Numeric validation
+                for col in ["spend", "ctr", "roas"]:
+                    df[col] = pd.to_numeric(df[col], errors="raise")
+>>>>>>> main
 
                 logger.bind(agent="data", step="load_success", rows=len(df)).info("Data loaded")
                 return df
@@ -135,4 +149,44 @@ class DataAgent:
             "segment_ctr": seg_ctr,
             "worst_segment": worst_segment,
             "worst_value": worst_value
+        }
+
+ 
+    def compute_deltas(self, df):
+     
+        logger.info("Computing baseline vs current performance")
+
+      
+        mid = len(df) // 2
+        baseline = df.iloc[:mid]
+        current = df.iloc[mid:]
+
+        def avg_metrics(d):
+            return {
+                "ctr": d["ctr"].mean(),
+                "roas": d["roas"].mean(),
+                "spend": d["spend"].mean(),
+            }
+
+        base = avg_metrics(baseline)
+        curr = avg_metrics(current)
+
+   
+        deltas = {
+            "ctr_delta_pct": ((curr["ctr"] - base["ctr"]) / base["ctr"]) * 100 if base["ctr"] != 0 else 0,
+            "roas_delta_pct": ((curr["roas"] - base["roas"]) / base["roas"]) * 100 if base["roas"] != 0 else 0,
+            "spend_delta_pct": ((curr["spend"] - base["spend"]) / base["spend"]) * 100 if base["spend"] != 0 else 0,
+        }
+        seg = (
+            df.groupby("country")["ctr"]
+            .mean()
+            .sort_values()
+            .to_dict()
+        )
+
+        return {
+            "baseline": base,
+            "current": curr,
+            "deltas": deltas,
+            "segment_ctr": seg
         }
