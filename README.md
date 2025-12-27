@@ -104,6 +104,7 @@ make clean    # clear logs + reports
 
 ## Repo Map
 
+'''text
 project/
 ├── config/
 │   ├── config.yaml
@@ -146,6 +147,7 @@ project/
 ├── Makefile
 ├── requirements.txt
 └── README.md
+'''
 
 ---
 
