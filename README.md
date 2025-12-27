@@ -1,8 +1,7 @@
 # Agentic Facebook Performance Analyst
 
-A modular multi-agent system that analyzes Facebook Ads performance, detects CTR/ROAS issues, performs schema validation, retries on failure, and generates improved creatives.
-Follows all Kasparro Agentic Assignment requirements: clean structure, agents, config, logs, tests, reproducibility, and dataset switching.
-
+A modular multi-agent system that analyzes Facebook Ads performance, detects CTR and ROAS issues, performs schema validation, handles retries on failure, and generates improved ad creatives.
+The project is designed with a clean, reproducible architecture featuring configurable agents, structured logging, automated testing, and flexible dataset switching.
 ---
 
 ## Quick Start
