@@ -9,8 +9,10 @@ class InsightAgent:
         if (
             not summary
             or "avg_ctr" not in summary
-            or (isinstance(summary.get("avg_ctr"), float)
-                and math.isnan(summary.get("avg_ctr")))
+            or (
+                isinstance(summary.get("avg_ctr"), float)
+                and math.isnan(summary.get("avg_ctr"))
+            )
         ):
             logger.bind(agent="insight", reason="invalid_summary").warning(
                 "Fallback triggered: summary missing or invalid"
@@ -54,7 +56,6 @@ class InsightAgent:
                 "confidence": max(0.2, min(0.9, abs(pct) / 100))
             })
 
-     
         if "roas_delta_pct" in deltas:
             pct = deltas["roas_delta_pct"]
 
@@ -72,7 +73,9 @@ class InsightAgent:
             })
 
         if not hypotheses:
-            logger.bind(agent="insight").info("No drift detected; returning fallback hypothesis")
+            logger.bind(agent="insight").info(
+                "No drift detected; returning fallback hypothesis"
+            )
             return [{
                 "issue": "Unknown",
                 "reason": "No significant drift",
@@ -84,7 +87,3 @@ class InsightAgent:
         )
 
         return hypotheses
-
-
-
-      
